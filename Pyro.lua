@@ -1,824 +1,958 @@
-
---==================================================
--- PYROVEX HUB - ADVANCED TOP LOADING EFFECT
--- BLUE x RED x BLACK x PURPLE
--- 5 SECONDS | PREMIUM ANIMATED LOADER
---==================================================
-
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
+local RS = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
+local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
 
-local LogoAsset = "rbxthumb://type=Asset&id=97950138094007&w=420&h=420"
+local LOGO = "rbxthumb://type=Asset&id=97950138094007&w=420&h=420"
+local MAX_DISPLAY_ORDER = 2147483647
 
-local Old = PlayerGui:FindFirstChild("PyrovexTopLoader")
-if Old then Old:Destroy() end
+local C = {
+    BG = Color3.fromRGB(8,4,10),
+    P1 = Color3.fromRGB(25,7,16),
+    P2 = Color3.fromRGB(43,9,22),
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PyrovexTopLoader"
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 999999
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = PlayerGui
+    Red = Color3.fromRGB(220,28,62),
+    Red2 = Color3.fromRGB(255,65,90),
 
-local function New(class,props,parent)
-    local object = Instance.new(class)
+    Purple = Color3.fromRGB(125,45,255),
+    Purple2 = Color3.fromRGB(190,85,255),
 
-    for property,value in pairs(props or {}) do
-        object[property] = value
+    White = Color3.fromRGB(248,242,246),
+    Gray = Color3.fromRGB(155,135,145),
+
+    Good = Color3.fromRGB(65,215,130),
+    Bad = Color3.fromRGB(255,55,80)
+}
+
+--========================================================
+-- GENERAL FUNCTIONS
+--========================================================
+
+local function New(class, props, parent)
+    local obj = Instance.new(class)
+
+    for k,v in pairs(props or {}) do
+        obj[k] = v
     end
 
-    object.Parent = parent
-    return object
+    obj.Parent = parent
+    return obj
 end
 
-local function Tween(obj,properties,duration,style,direction)
-    local tween = TweenService:Create(
+local function Corner(obj, radius)
+    return New("UICorner", {
+        CornerRadius = UDim.new(0,radius)
+    },obj)
+end
+
+local function Stroke(obj,color,transparency,thickness)
+    return New("UIStroke", {
+        Color = color,
+        Transparency = transparency or 0,
+        Thickness = thickness or 1
+    },obj)
+end
+
+local function Gradient(obj, colors, rotation)
+    return New("UIGradient", {
+        Color = colors,
+        Rotation = rotation or 0
+    },obj)
+end
+
+local function Tween(obj,duration,properties,style,direction)
+    local tw = TS:Create(
         obj,
         TweenInfo.new(
-            duration or 0.25,
+            duration,
             style or Enum.EasingStyle.Quart,
             direction or Enum.EasingDirection.Out
         ),
         properties
     )
 
-    tween:Play()
-    return tween
+    tw:Play()
+    return tw
 end
 
-local Main = New("Frame",{
-    Name = "LoadingContainer",
+local function MakeButton(parent,text,pos,size)
+    local b = New("TextButton", {
+        Position = pos,
+        Size = size,
+        BackgroundColor3 = C.P2,
+        BorderSizePixel = 0,
+        Text = text,
+        TextColor3 = C.White,
+        TextSize = 8,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false
+    },parent)
+
+    Corner(b,8)
+    Stroke(b,C.Red,.45,1)
+
+    return b
+end
+
+--========================================================
+-- PREMIUM LOADING SCREEN
+--========================================================
+
+local OldLoader = PlayerGui:FindFirstChild("PyrovexTopLoader")
+if OldLoader then
+    OldLoader:Destroy()
+end
+
+local Loader = New("ScreenGui", {
+    Name = "PyrovexTopLoader",
+    IgnoreGuiInset = true,
+    ResetOnSpawn = false,
+    DisplayOrder = MAX_DISPLAY_ORDER,
+    ZIndexBehavior = Enum.ZIndexBehavior.Global
+},PlayerGui)
+
+local LoadMain = New("Frame", {
     Size = UDim2.fromOffset(340,62),
-    Position = UDim2.new(0.5,0,0,-85),
-    AnchorPoint = Vector2.new(0.5,0),
-    BackgroundColor3 = Color3.fromRGB(10,12,23),
+    Position = UDim2.new(.5,0,0,-85),
+    AnchorPoint = Vector2.new(.5,0),
+    BackgroundColor3 = C.BG,
     BorderSizePixel = 0,
     ClipsDescendants = true,
     ZIndex = 10
-},ScreenGui)
+},Loader)
 
-New("UICorner",{
-    CornerRadius = UDim.new(0,13)
-},Main)
+Corner(LoadMain,13)
 
-local MainStroke = New("UIStroke",{
-    Color = Color3.fromRGB(90,105,210),
-    Thickness = 1.3,
-    Transparency = 0.1
-},Main)
+local LoadStroke = Stroke(LoadMain,C.Purple,.1,1.4)
 
-New("UIGradient",{
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(12,18,35)),
-        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(15,12,28)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(28,12,25))
-    }),
-    Rotation = 15
-},Main)
+Gradient(LoadMain,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(16,10,31)),
+    ColorSequenceKeypoint.new(.5,Color3.fromRGB(15,7,20)),
+    ColorSequenceKeypoint.new(1,Color3.fromRGB(35,8,21))
+}),20)
 
--- OUTER GLOW
+-- TOP GLOW
 
-local Glow = New("Frame",{
-    Name = "Glow",
+local TopGlow = New("Frame", {
     Size = UDim2.new(1,-12,0,2),
     Position = UDim2.fromOffset(6,0),
-    BackgroundColor3 = Color3.fromRGB(80,120,255),
+    BackgroundColor3 = C.Purple,
     BorderSizePixel = 0,
-    ZIndex = 12
-},Main)
-
-New("UICorner",{
-    CornerRadius = UDim.new(1,0)
-},Glow)
-
-New("UIGradient",{
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(0,130,255)),
-        ColorSequenceKeypoint.new(0.35,Color3.fromRGB(120,65,255)),
-        ColorSequenceKeypoint.new(0.7,Color3.fromRGB(230,45,100)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(255,65,65))
-    })
-},Glow)
-
--- SETTINGS EMOJI
-
-local Settings = New("TextLabel",{
-    Name = "SettingsIcon",
-    Size = UDim2.fromOffset(32,32),
-    Position = UDim2.fromOffset(11,10),
-    BackgroundTransparency = 1,
-    Text = "⚙️",
-    TextSize = 24,
-    Font = Enum.Font.GothamBold,
-    TextColor3 = Color3.fromRGB(255,255,255),
     ZIndex = 15
-},Main)
+},LoadMain)
+
+Corner(TopGlow,10)
+
+Gradient(TopGlow,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(0,130,255)),
+    ColorSequenceKeypoint.new(.35,C.Purple),
+    ColorSequenceKeypoint.new(.7,C.Red),
+    ColorSequenceKeypoint.new(1,C.Red2)
+}),0)
+
+-- LOADING IMAGE
+
+local LoadLogo = New("ImageLabel", {
+    Size = UDim2.fromOffset(34,34),
+    Position = UDim2.fromOffset(9,9),
+    BackgroundColor3 = C.P2,
+    BorderSizePixel = 0,
+    Image = LOGO,
+    ScaleType = Enum.ScaleType.Crop,
+    ZIndex = 16
+},LoadMain)
+
+Corner(LoadLogo,10)
+LoadLogo.ClipsDescendants = true
+Stroke(LoadLogo,C.Purple2,.05,1.2)
+
+local LogoBorder = LoadLogo:FindFirstChildOfClass("UIStroke")
 
 task.spawn(function()
-    while ScreenGui.Parent and Settings.Parent do
-        local rotate = Tween(
-            Settings,
-            {Rotation = Settings.Rotation + 360},
-            1.35,
-            Enum.EasingStyle.Linear
+    while Loader.Parent do
+        LogoBorder.Color = C.Red:Lerp(
+            C.Purple2,
+            (math.sin(tick()*2)+1)/2
         )
 
-        rotate.Completed:Wait()
+        task.wait(.025)
     end
 end)
 
--- TITLE
+-- LOADING TITLE
 
-local Title = New("TextLabel",{
-    Name = "Title",
+local LoadTitle = New("TextLabel", {
     Position = UDim2.fromOffset(51,8),
-    Size = UDim2.new(1,-115,0,17),
+    Size = UDim2.new(1,-110,0,17),
     BackgroundTransparency = 1,
     Text = "PYROVEX HUB",
-    TextColor3 = Color3.fromRGB(245,248,255),
+    TextColor3 = C.White,
     TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamBlack,
-    ZIndex = 15
-},Main)
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 16
+},LoadMain)
 
--- STATUS
-
-local Status = New("TextLabel",{
-    Name = "Status",
+local LoadStatus = New("TextLabel", {
     Position = UDim2.fromOffset(51,25),
     Size = UDim2.new(1,-105,0,15),
     BackgroundTransparency = 1,
-    Text = "Initializing loader...",
-    TextColor3 = Color3.fromRGB(150,165,195),
+    Text = "Initializing Pyrovex Hub...",
+    TextColor3 = C.Gray,
     TextSize = 8,
-    TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamMedium,
-    ZIndex = 15
-},Main)
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 16
+},LoadMain)
 
--- PERCENTAGE
-
-local Percentage = New("TextLabel",{
-    Name = "Percentage",
+local LoadPercent = New("TextLabel", {
     Position = UDim2.new(1,-54,0,24),
     Size = UDim2.fromOffset(43,16),
     BackgroundTransparency = 1,
     Text = "0%",
-    TextColor3 = Color3.fromRGB(150,190,255),
+    TextColor3 = C.Purple2,
     TextSize = 9,
-    TextXAlignment = Enum.TextXAlignment.Right,
     Font = Enum.Font.GothamBold,
-    ZIndex = 15
-},Main)
+    TextXAlignment = Enum.TextXAlignment.Right,
+    ZIndex = 16
+},LoadMain)
 
 -- PROGRESS BACKGROUND
 
-local BarBG = New("Frame",{
-    Name = "ProgressBackground",
+local LoadBG = New("Frame", {
     Size = UDim2.new(1,-22,0,5),
     Position = UDim2.fromOffset(11,48),
-    BackgroundColor3 = Color3.fromRGB(32,35,53),
+    BackgroundColor3 = Color3.fromRGB(36,27,43),
     BorderSizePixel = 0,
     ClipsDescendants = true,
-    ZIndex = 15
-},Main)
-
-New("UICorner",{
-    CornerRadius = UDim.new(1,0)
-},BarBG)
-
--- PROGRESS BAR
-
-local Bar = New("Frame",{
-    Name = "ProgressBar",
-    Size = UDim2.new(0,0,1,0),
-    BackgroundColor3 = Color3.fromRGB(50,130,255),
-    BorderSizePixel = 0,
     ZIndex = 16
-},BarBG)
+},LoadMain)
 
-New("UICorner",{
-    CornerRadius = UDim.new(1,0)
-},Bar)
+Corner(LoadBG,10)
 
-local BarGradient = New("UIGradient",{
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(0,145,255)),
-        ColorSequenceKeypoint.new(0.35,Color3.fromRGB(100,80,255)),
-        ColorSequenceKeypoint.new(0.7,Color3.fromRGB(190,55,160)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(255,55,70))
-    }),
-    Rotation = 0
-},Bar)
+local LoadBar = New("Frame", {
+    Size = UDim2.new(0,0,1,0),
+    BackgroundColor3 = C.Red,
+    BorderSizePixel = 0,
+    ZIndex = 17
+},LoadBG)
+
+Corner(LoadBar,10)
+
+Gradient(LoadBar,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(0,145,255)),
+    ColorSequenceKeypoint.new(.35,C.Purple),
+    ColorSequenceKeypoint.new(.7,C.Red),
+    ColorSequenceKeypoint.new(1,C.Red2)
+}),0)
 
 -- MOVING SHINE
 
-local Shine = New("Frame",{
-    Name = "ProgressShine",
-    Size = UDim2.new(0,45,1,0),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundColor3 = Color3.fromRGB(255,255,255),
-    BackgroundTransparency = 0.55,
+local Shine = New("Frame", {
+    Size = UDim2.new(0,35,1,0),
+    BackgroundColor3 = Color3.new(1,1,1),
+    BackgroundTransparency = .45,
     BorderSizePixel = 0,
-    ZIndex = 17
-},Bar)
+    ZIndex = 18
+},LoadBar)
 
-New("UICorner",{
-    CornerRadius = UDim.new(1,0)
-},Shine)
+Corner(Shine,10)
 
-New("UIGradient",{
-    Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0,1),
-        NumberSequenceKeypoint.new(0.5,0),
-        NumberSequenceKeypoint.new(1,1)
-    })
-},Shine)
-
--- LOADING ENTRANCE
+Gradient(Shine,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.new(1,1,1)),
+    ColorSequenceKeypoint.new(.5,Color3.new(1,1,1)),
+    ColorSequenceKeypoint.new(1,Color3.new(1,1,1))
+}),0)
 
 Tween(
-    Main,
-    {Position = UDim2.new(0.5,0,0,12)},
-    0.75,
-    Enum.EasingStyle.Quint,
-    Enum.EasingDirection.Out
+    LoadMain,
+    .8,
+    {Position = UDim2.new(.5,0,0,12)},
+    Enum.EasingStyle.Quint
 )
 
--- BORDER ANIMATION
-
 task.spawn(function()
-    while ScreenGui.Parent do
-        Tween(MainStroke,{
-            Transparency = 0.55,
-            Color = Color3.fromRGB(180,65,160)
-        },0.8)
+    while Loader.Parent do
+        Tween(LoadStroke,.8,{
+            Color = C.Red,
+            Transparency = .1
+        })
 
-        task.wait(0.8)
+        task.wait(.8)
 
-        if not ScreenGui.Parent then break end
+        if not Loader.Parent then break end
 
-        Tween(MainStroke,{
-            Transparency = 0.1,
-            Color = Color3.fromRGB(70,145,255)
-        },0.8)
+        Tween(LoadStroke,.8,{
+            Color = C.Purple2,
+            Transparency = .25
+        })
 
-        task.wait(0.8)
+        task.wait(.8)
     end
 end)
 
--- SHINE ANIMATION
-
 task.spawn(function()
-    while ScreenGui.Parent and Shine.Parent do
-        Shine.Position = UDim2.new(0,-45,0,0)
+    while Loader.Parent and Shine.Parent do
+        Shine.Position = UDim2.new(0,-40,0,0)
 
-        local shineTween = Tween(
+        Tween(
             Shine,
+            .7,
             {Position = UDim2.new(1,0,0,0)},
-            0.75,
             Enum.EasingStyle.Linear
-        )
+        ).Completed:Wait()
 
-        shineTween.Completed:Wait()
-        task.wait(0.12)
+        task.wait(.1)
     end
 end)
 
--- LOADING STATUS
+-- LOADING SEQUENCE
 
-local LoadingMessages = {
-    {Time = 0, Text = "Initializing Pyrovex Hub..."},
-    {Time = 1, Text = "Preparing loader interface..."},
-    {Time = 2, Text = "Loading script collection..."},
-    {Time = 3, Text = "Setting up components..."},
-    {Time = 4, Text = "Almost ready..."}
+local Messages = {
+    "Initializing Pyrovex Hub...",
+    "Preparing interface components...",
+    "Loading script analyzer...",
+    "Optimizing visual components...",
+    "Almost ready..."
 }
 
-for _,message in ipairs(LoadingMessages) do
-    task.delay(message.Time,function()
-        if not ScreenGui.Parent then return end
-
-        Tween(Status,{
-            TextTransparency = 1
-        },0.15)
-
-        task.wait(0.15)
-
-        if not ScreenGui.Parent then return end
-
-        Status.Text = message.Text
-
-        Tween(Status,{
-            TextTransparency = 0
-        },0.2)
-    end)
-end
-
--- EXACT 5 SECOND PROGRESS
-
-local StartTime = os.clock()
+local Start = os.clock()
 local Duration = 5
+local MessageIndex = 1
 
-local Progress = Tween(
-    Bar,
-    {Size = UDim2.new(1,0,1,0)},
+Tween(
+    LoadBar,
     Duration,
+    {Size = UDim2.new(1,0,1,0)},
     Enum.EasingStyle.Linear
 )
 
-Progress:Play()
+while os.clock()-Start < Duration do
+    if not Loader.Parent then return end
 
-while os.clock() - StartTime < Duration do
-    if not ScreenGui.Parent then return end
+    local elapsed = os.clock()-Start
+    local progress = math.clamp(elapsed/Duration,0,1)
 
-    local elapsed = os.clock() - StartTime
-    local percent = math.clamp(math.floor((elapsed / Duration) * 100),0,100)
+    LoadPercent.Text = math.floor(progress*100).."%"
 
-    Percentage.Text = percent.."%"
+    local index = math.min(
+        #Messages,
+        math.floor(elapsed)+1
+    )
 
-    task.wait(0.04)
+    if index ~= MessageIndex then
+        MessageIndex = index
+
+        Tween(LoadStatus,.12,{
+            TextTransparency = 1
+        })
+
+        task.wait(.12)
+
+        if not Loader.Parent then return end
+
+        LoadStatus.Text = Messages[index]
+
+        Tween(LoadStatus,.2,{
+            TextTransparency = 0
+        })
+    end
+
+    task.wait(.025)
 end
 
-Percentage.Text = "100%"
-Status.Text = "Pyrovex Hub is ready!"
+LoadPercent.Text = "100%"
+LoadStatus.Text = "Pyrovex Hub is ready!"
 
--- FINISH EFFECT
-
-Tween(MainStroke,{
-    Color = Color3.fromRGB(80,220,160),
+Tween(LoadStroke,.2,{
+    Color = C.Good,
     Transparency = 0
-},0.2)
+})
 
-Tween(Bar,{
-    BackgroundColor3 = Color3.fromRGB(60,220,150)
-},0.2)
+Tween(LoadBar,.2,{
+    BackgroundColor3 = C.Good
+})
 
-task.wait(0.25)
+task.wait(.3)
 
--- LOADING EXIT
-
-Tween(Main,{
-    Position = UDim2.new(0.5,0,0,-85),
-    BackgroundTransparency = 1
-},0.65,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
-
-Tween(Settings,{TextTransparency = 1},0.35)
-Tween(Title,{TextTransparency = 1},0.35)
-Tween(Status,{TextTransparency = 1},0.35)
-Tween(Percentage,{TextTransparency = 1},0.35)
-Tween(BarBG,{BackgroundTransparency = 1},0.35)
-Tween(Glow,{BackgroundTransparency = 1},0.35)
-
-task.wait(0.7)
-
-if ScreenGui then
-    ScreenGui:Destroy()
-end
-
-local Players=game:GetService("Players")
-local UIS=game:GetService("UserInputService")
-local TS=game:GetService("TweenService")
-local RS=game:GetService("RunService")
-local TextService=game:GetService("TextService")
-local LP=Players.LocalPlayer
-
-local C={
-BG=Color3.fromRGB(8,4,10),
-P1=Color3.fromRGB(25,7,16),
-P2=Color3.fromRGB(43,9,22),
-Red=Color3.fromRGB(220,28,62),
-Red2=Color3.fromRGB(255,65,90),
-Purple=Color3.fromRGB(125,45,255),
-Purple2=Color3.fromRGB(190,85,255),
-White=Color3.fromRGB(248,242,246),
-Gray=Color3.fromRGB(155,135,145),
-Good=Color3.fromRGB(65,215,130),
-Bad=Color3.fromRGB(255,55,80)
-}
-
-local Checking=false
-local Minimized=false
-
-local function Corner(o,r)
-local x=Instance.new("UICorner")
-x.CornerRadius=UDim.new(0,r)
-x.Parent=o
-end
-
-local function Stroke(o,c,t,w)
-local x=Instance.new("UIStroke")
-x.Color=c
-x.Transparency=t or 0
-x.Thickness=w or 1
-x.Parent=o
-return x
-end
-
-local function Tween(o,t,p)
-local x=TS:Create(
-o,
-TweenInfo.new(t,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),
-p
+Tween(
+    LoadMain,
+    .65,
+    {
+        Position = UDim2.new(.5,0,0,-85),
+        BackgroundTransparency = 1
+    },
+    Enum.EasingStyle.Quint,
+    Enum.EasingDirection.In
 )
-x:Play()
-return x
+
+for _,obj in ipairs({
+    LoadLogo,
+    LoadTitle,
+    LoadStatus,
+    LoadPercent,
+    LoadBG,
+    TopGlow
+}) do
+    if obj:IsA("ImageLabel") then
+        Tween(obj,.3,{
+            ImageTransparency = 1,
+            BackgroundTransparency = 1
+        })
+    elseif obj:IsA("TextLabel") then
+        Tween(obj,.3,{
+            TextTransparency = 1
+        })
+    else
+        Tween(obj,.3,{
+            BackgroundTransparency = 1
+        })
+    end
 end
 
-local function Button(parent,text,pos,size)
-local b=Instance.new("TextButton")
-b.Position=pos
-b.Size=size
-b.BackgroundColor3=C.P2
-b.BorderSizePixel=0
-b.Text=text
-b.TextColor3=C.White
-b.TextSize=8
-b.Font=Enum.Font.GothamBold
-b.AutoButtonColor=false
-b.Parent=parent
-Corner(b,8)
-Stroke(b,C.Red,.45,1)
-return b
+task.wait(.7)
+Loader:Destroy()
+
+--========================================================
+-- MAIN PYROVEX SCRIPT ANALYZER
+--========================================================
+
+local OldGUI = PlayerGui:FindFirstChild("PyrovexDebugger")
+if OldGUI then
+    OldGUI:Destroy()
 end
 
-local GUI=Instance.new("ScreenGui")
-GUI.Name="PyrovexDebugger"
-GUI.ResetOnSpawn=false
-GUI.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-GUI.Parent=(gethui and gethui()) or game:GetService("CoreGui")
+local GUI = New("ScreenGui", {
+    Name = "PyrovexDebugger",
+    IgnoreGuiInset = true,
+    ResetOnSpawn = false,
+    DisplayOrder = MAX_DISPLAY_ORDER,
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
+    Enabled = true
+},PlayerGui)
 
--- ROOT
+local Checking = false
+local Minimized = false
 
-local Root=Instance.new("Frame")
-Root.Size=UDim2.fromOffset(350,300)
-Root.Position=UDim2.new(.5,-175,.5,-150)
-Root.BackgroundTransparency=1
-Root.Parent=GUI
+-- ROOT - ORIGINAL DIMENSIONS
 
--- LEFT SCRIPT EDITOR
+local Root = New("Frame", {
+    Size = UDim2.fromOffset(350,300),
+    Position = UDim2.new(.5,-175,.5,-150),
+    BackgroundTransparency = 1
+},GUI)
 
-local Editor=Instance.new("Frame")
-Editor.Size=UDim2.fromOffset(170,300)
-Editor.Position=UDim2.fromOffset(0,0)
-Editor.BackgroundColor3=C.BG
-Editor.BorderSizePixel=0
-Editor.ClipsDescendants=true
-Editor.Parent=Root
+--========================================================
+-- LEFT EDITOR
+--========================================================
+
+local Editor = New("Frame", {
+    Size = UDim2.fromOffset(170,300),
+    Position = UDim2.fromOffset(0,0),
+    BackgroundColor3 = C.BG,
+    BorderSizePixel = 0,
+    ClipsDescendants = true
+},Root)
 
 Corner(Editor,12)
-Stroke(Editor,C.Purple,.12,1.3)
+Stroke(Editor,C.Purple,.1,1.3)
 
-local EG=Instance.new("UIGradient")
-EG.Color=ColorSequence.new{
-ColorSequenceKeypoint.new(0,Color3.fromRGB(30,6,23)),
-ColorSequenceKeypoint.new(.5,C.BG),
-ColorSequenceKeypoint.new(1,Color3.fromRGB(10,3,12))
-}
-EG.Rotation=25
-EG.Parent=Editor
+Gradient(Editor,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(30,6,23)),
+    ColorSequenceKeypoint.new(.5,C.BG),
+    ColorSequenceKeypoint.new(1,Color3.fromRGB(10,3,12))
+}),25)
 
+-- EDITOR HEADER
+
+local EditorHeader = New("Frame", {
+    Size = UDim2.new(1,-12,0,20),
+    Position = UDim2.fromOffset(6,5),
+    BackgroundColor3 = C.P1,
+    BorderSizePixel = 0
+},Editor)
+
+Corner(EditorHeader,6)
+
+local EditorName = New("TextLabel", {
+    Position = UDim2.fromOffset(6,0),
+    Size = UDim2.fromOffset(65,20),
+    BackgroundTransparency = 1,
+    Text = "LUA EDITOR",
+    TextColor3 = C.Purple2,
+    TextSize = 7,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+},EditorHeader)
+
+-- LIVE LOCS
+
+local LOCLabel = New("TextLabel", {
+    Position = UDim2.new(1,-91,0,0),
+    Size = UDim2.fromOffset(43,20),
+    BackgroundTransparency = 1,
+    Text = "LOC: 0",
+    TextColor3 = C.Good,
+    TextSize = 6,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Right
+},EditorHeader)
+
+-- LIVE LINES
+
+local LinesLabel = New("TextLabel", {
+    Position = UDim2.new(1,-46,0,0),
+    Size = UDim2.fromOffset(40,20),
+    BackgroundTransparency = 1,
+    Text = "LN: 1",
+    TextColor3 = C.Purple2,
+    TextSize = 6,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Right
+},EditorHeader)
+
+--========================================================
 -- SCRIPT SCROLLER
+--========================================================
 
-local Scroll=Instance.new("ScrollingFrame")
-Scroll.Position=UDim2.fromOffset(5,5)
-Scroll.Size=UDim2.new(1,-10,1,-10)
-Scroll.BackgroundColor3=Color3.fromRGB(6,3,8)
-Scroll.BorderSizePixel=0
-Scroll.ClipsDescendants=true
-Scroll.ScrollingDirection=Enum.ScrollingDirection.XY
-Scroll.ScrollBarThickness=5
-Scroll.ScrollBarImageColor3=C.Purple
-Scroll.ScrollBarImageTransparency=.05
-Scroll.HorizontalScrollBarInset=Enum.ScrollBarInset.ScrollBar
-Scroll.VerticalScrollBarInset=Enum.ScrollBarInset.ScrollBar
-Scroll.CanvasPosition=Vector2.new(0,0)
-Scroll.CanvasSize=UDim2.fromOffset(20,20)
-Scroll.Parent=Editor
+local Scroll = New("ScrollingFrame", {
+    Position = UDim2.fromOffset(5,29),
+    Size = UDim2.new(1,-10,1,-34),
+    BackgroundColor3 = Color3.fromRGB(6,3,8),
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    ScrollingDirection = Enum.ScrollingDirection.XY,
+    ScrollBarThickness = 5,
+    ScrollBarImageColor3 = C.Purple,
+    ScrollBarImageTransparency = .05,
+    CanvasPosition = Vector2.zero,
+    CanvasSize = UDim2.fromOffset(160,260)
+},Editor)
 
-Corner(Scroll,9)
+Corner(Scroll,8)
 Stroke(Scroll,C.Purple,.58,1)
 
--- TEXT BOX
+--========================================================
+-- LINE NUMBER GUTTER
+--========================================================
 
-local Box=Instance.new("TextBox")
-Box.Position=UDim2.fromOffset(7,7)
-Box.Size=UDim2.fromOffset(145,280)
-Box.BackgroundTransparency=1
-Box.BorderSizePixel=0
-Box.ClearTextOnFocus=false
-Box.MultiLine=true
-Box.Text=""
-Box.PlaceholderText="Paste Lua script here..."
-Box.PlaceholderColor3=Color3.fromRGB(90,70,95)
-Box.TextColor3=Color3.fromRGB(230,220,232)
-Box.TextSize=9
-Box.Font=Enum.Font.Code
-Box.TextXAlignment=Enum.TextXAlignment.Left
-Box.TextYAlignment=Enum.TextYAlignment.Top
-Box.TextWrapped=false
-Box.Parent=Scroll
+local Gutter = New("Frame", {
+    Position = UDim2.fromOffset(0,0),
+    Size = UDim2.new(0,24,1,0),
+    BackgroundColor3 = Color3.fromRGB(14,7,17),
+    BorderSizePixel = 0,
+    ZIndex = 2
+},Scroll)
 
--- SCROLL SIZE FIX
+local GutterLine = New("Frame", {
+    Position = UDim2.new(1,-1,0,0),
+    Size = UDim2.new(0,1,1,0),
+    BackgroundColor3 = C.Purple,
+    BackgroundTransparency = .55,
+    BorderSizePixel = 0,
+    ZIndex = 3
+},Gutter)
+
+local LineNumbers = New("TextLabel", {
+    Position = UDim2.fromOffset(0,5),
+    Size = UDim2.new(1,-3,0,250),
+    BackgroundTransparency = 1,
+    Text = "1",
+    TextColor3 = Color3.fromRGB(155,110,185),
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    TextYAlignment = Enum.TextYAlignment.Top,
+    TextWrapped = false,
+    ZIndex = 3
+},Gutter)
+
+--========================================================
+-- SCRIPT TEXTBOX
+--========================================================
+
+local Box = New("TextBox", {
+    Position = UDim2.fromOffset(29,5),
+    Size = UDim2.fromOffset(125,250),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ClearTextOnFocus = false,
+    MultiLine = true,
+    Text = "",
+    PlaceholderText = "Paste Lua script here...",
+    PlaceholderColor3 = Color3.fromRGB(90,70,95),
+    TextColor3 = Color3.fromRGB(230,220,232),
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextYAlignment = Enum.TextYAlignment.Top,
+    TextWrapped = false,
+    ZIndex = 3
+},Scroll)
+
+--========================================================
+-- LIVE SCRIPT STATISTICS + LINE NUMBERS
+--========================================================
 
 local function UpdateCanvas()
-local viewportW=math.max(1,Scroll.AbsoluteSize.X-14)
-local viewportH=math.max(1,Scroll.AbsoluteSize.Y-14)
-local text=Box.Text
+    local text = Box.Text
+    local lineCount = 1
+    local locCount = 0
+    local longest = ""
 
-if text=="" then
-	Box.Size=UDim2.fromOffset(viewportW,viewportH)
-	Scroll.CanvasSize=UDim2.fromOffset(viewportW,viewportH)
-	return
-end
+    for line in (text.."\n"):gmatch("(.-)\n") do
+        lineCount += 1
 
-local bounds=TextService:GetTextSize(
-	text,
-	Box.TextSize,
-	Box.Font,
-	Vector2.new(100000,100000)
-)
+        if line:match("%S") then
+            locCount += 1
+        end
 
-local textW=math.max(viewportW,bounds.X+25)
-local textH=math.max(viewportH,bounds.Y+25)
+        if #line > #longest then
+            longest = line
+        end
+    end
 
-Box.Size=UDim2.fromOffset(textW,textH)
-Scroll.CanvasSize=UDim2.fromOffset(textW+14,textH+14)
+    lineCount = math.max(1,lineCount-1)
 
+    -- UPDATE LINE NUMBERS
+
+    local numberText = {}
+
+    for i = 1,lineCount do
+        numberText[i] = tostring(i)
+    end
+
+    LineNumbers.Text = table.concat(numberText,"\n")
+
+    -- UPDATE LOC / LN
+
+    LOCLabel.Text = "LOC: "..locCount
+    LinesLabel.Text = "LN: "..lineCount
+
+    -- TEXT DIMENSIONS
+
+    local viewportW = math.max(1,Scroll.AbsoluteSize.X-38)
+    local viewportH = math.max(1,Scroll.AbsoluteSize.Y-14)
+
+    local measured = TextService:GetTextSize(
+        longest,
+        Box.TextSize,
+        Box.Font,
+        Vector2.new(100000,100000)
+    )
+
+    local textW = math.max(viewportW,measured.X+12)
+    local textH = math.max(
+        viewportH,
+        lineCount*12+12
+    )
+
+    Box.Size = UDim2.fromOffset(textW,textH)
+
+    LineNumbers.Size = UDim2.new(
+        1,-3,
+        0,textH
+    )
+
+    Gutter.Size = UDim2.new(
+        0,24,
+        0,textH+10
+    )
+
+    Scroll.CanvasSize = UDim2.fromOffset(
+        textW+39,
+        textH+15
+    )
 end
 
 Box:GetPropertyChangedSignal("Text"):Connect(function()
-task.defer(UpdateCanvas)
+    task.defer(UpdateCanvas)
 end)
 
 Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-task.defer(UpdateCanvas)
+    task.defer(UpdateCanvas)
 end)
 
+--========================================================
 -- RIGHT MENU
+--========================================================
 
-local Main=Instance.new("Frame")
-Main.Size=UDim2.fromOffset(180,300)
-Main.Position=UDim2.fromOffset(170,0)
-Main.BackgroundColor3=C.BG
-Main.BorderSizePixel=0
-Main.ClipsDescendants=true
-Main.Parent=Root
+local Main = New("Frame", {
+    Size = UDim2.fromOffset(180,300),
+    Position = UDim2.fromOffset(170,0),
+    BackgroundColor3 = C.BG,
+    BorderSizePixel = 0,
+    ClipsDescendants = true
+},Root)
 
 Corner(Main,12)
-local MainStroke=Stroke(Main,C.Red,.1,1.3)
 
-local MG=Instance.new("UIGradient")
-MG.Color=ColorSequence.new{
-ColorSequenceKeypoint.new(0,Color3.fromRGB(38,7,19)),
-ColorSequenceKeypoint.new(.5,C.BG),
-ColorSequenceKeypoint.new(1,Color3.fromRGB(10,3,11))
-}
-MG.Rotation=135
-MG.Parent=Main
+local MainStroke = Stroke(Main,C.Red,.1,1.3)
 
--- HEADER
+Gradient(Main,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(38,7,19)),
+    ColorSequenceKeypoint.new(.5,C.BG),
+    ColorSequenceKeypoint.new(1,Color3.fromRGB(10,3,11))
+}),135)
 
-local Logo=Instance.new("Frame")
-Logo.Size=UDim2.fromOffset(34,34)
-Logo.Position=UDim2.fromOffset(8,8)
-Logo.BackgroundColor3=C.Red
-Logo.BorderSizePixel=0
-Logo.Parent=Main
+--========================================================
+-- HEADER + IMAGE LOGO
+--========================================================
+
+local Logo = New("ImageLabel", {
+    Size = UDim2.fromOffset(34,34),
+    Position = UDim2.fromOffset(8,8),
+    BackgroundColor3 = C.P2,
+    BorderSizePixel = 0,
+    Image = LOGO,
+    ScaleType = Enum.ScaleType.Crop
+},Main)
 
 Corner(Logo,10)
-local LogoStroke=Stroke(Logo,C.Purple2,.1,1.1)
+Logo.ClipsDescendants = true
 
-local LG=Instance.new("UIGradient")
-LG.Color=ColorSequence.new{
-ColorSequenceKeypoint.new(0,C.Red),
-ColorSequenceKeypoint.new(.5,C.Purple),
-ColorSequenceKeypoint.new(1,C.Red)
-}
-LG.Rotation=45
-LG.Parent=Logo
+local LogoStroke = Stroke(Logo,C.Purple2,.05,1.2)
 
-local N=Instance.new("TextLabel")
-N.Size=UDim2.fromScale(1,1)
-N.BackgroundTransparency=1
-N.Text="P"
-N.TextColor3=C.White
-N.TextSize=18
-N.Font=Enum.Font.GothamBlack
-N.Parent=Logo
+local LogoGradient = Gradient(Logo,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,C.Red),
+    ColorSequenceKeypoint.new(.5,C.Purple),
+    ColorSequenceKeypoint.new(1,C.Red)
+}),45)
 
-local Title=Instance.new("TextLabel")
-Title.Position=UDim2.fromOffset(48,8)
-Title.Size=UDim2.new(1,-82,0,17)
-Title.BackgroundTransparency=1
-Title.Text="Pyrovex Hub"
-Title.TextColor3=C.White
-Title.TextSize=10
-Title.Font=Enum.Font.GothamBold
-Title.TextXAlignment=Enum.TextXAlignment.Left
-Title.Parent=Main
+local Title = New("TextLabel", {
+    Position = UDim2.fromOffset(48,8),
+    Size = UDim2.new(1,-82,0,17),
+    BackgroundTransparency = 1,
+    Text = "Pyrovex Hub",
+    TextColor3 = C.White,
+    TextSize = 10,
+    Font = Enum.Font.GothamBlack,
+    TextXAlignment = Enum.TextXAlignment.Left
+},Main)
 
-local Sub=Instance.new("TextLabel")
-Sub.Position=UDim2.fromOffset(49,24)
-Sub.Size=UDim2.new(1,-53,0,12)
-Sub.BackgroundTransparency=1
-Sub.Text="by Kingflame/Pyrovex Team"
-Sub.TextColor3=C.Gray
-Sub.TextSize=5.5
-Sub.Font=Enum.Font.Gotham
-Sub.TextXAlignment=Enum.TextXAlignment.Left
-Sub.TextTruncate=Enum.TextTruncate.AtEnd
-Sub.Parent=Main
+local Sub = New("TextLabel", {
+    Position = UDim2.fromOffset(49,24),
+    Size = UDim2.new(1,-53,0,12),
+    BackgroundTransparency = 1,
+    Text = "by Kingflame/Pyrovex Team",
+    TextColor3 = C.Gray,
+    TextSize = 5.5,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd
+},Main)
 
-local Close=Button(
-Main,
-"×",
-UDim2.new(1,-36,0,9),
-UDim2.fromOffset(27,27)
+local Close = MakeButton(
+    Main,
+    "×",
+    UDim2.new(1,-36,0,9),
+    UDim2.fromOffset(27,27)
 )
-Close.TextSize=15
 
+Close.TextSize = 15
+
+--========================================================
 -- STATUS
+--========================================================
 
-local Status=Instance.new("Frame")
-Status.Position=UDim2.fromOffset(7,50)
-Status.Size=UDim2.new(1,-14,0,48)
-Status.BackgroundColor3=C.P1
-Status.BorderSizePixel=0
-Status.Parent=Main
+local Status = New("Frame", {
+    Position = UDim2.fromOffset(7,50),
+    Size = UDim2.new(1,-14,0,48),
+    BackgroundColor3 = C.P1,
+    BorderSizePixel = 0
+},Main)
 
 Corner(Status,9)
 Stroke(Status,C.Red,.55,1)
 
-local ST=Instance.new("TextLabel")
-ST.Position=UDim2.fromOffset(9,6)
-ST.Size=UDim2.new(1,-18,0,10)
-ST.BackgroundTransparency=1
-ST.Text="STATUS"
-ST.TextColor3=C.Gray
-ST.TextSize=6
-ST.Font=Enum.Font.GothamBold
-ST.TextXAlignment=Enum.TextXAlignment.Left
-ST.Parent=Status
+local ST = New("TextLabel", {
+    Position = UDim2.fromOffset(9,6),
+    Size = UDim2.new(1,-18,0,10),
+    BackgroundTransparency = 1,
+    Text = "STATUS",
+    TextColor3 = C.Gray,
+    TextSize = 6,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+},Status)
 
-local SV=Instance.new("TextLabel")
-SV.Position=UDim2.fromOffset(9,21)
-SV.Size=UDim2.new(1,-18,0,18)
-SV.BackgroundTransparency=1
-SV.Text="READY TO CHECK"
-SV.TextColor3=C.White
-SV.TextSize=8
-SV.Font=Enum.Font.GothamBold
-SV.TextXAlignment=Enum.TextXAlignment.Left
-SV.Parent=Status
+local SV = New("TextLabel", {
+    Position = UDim2.fromOffset(9,21),
+    Size = UDim2.new(1,-18,0,18),
+    BackgroundTransparency = 1,
+    Text = "READY TO CHECK",
+    TextColor3 = C.White,
+    TextSize = 8,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+},Status)
 
+--========================================================
 -- ANALYSIS
+--========================================================
 
-local Result=Instance.new("Frame")
-Result.Position=UDim2.fromOffset(7,105)
-Result.Size=UDim2.new(1,-14,0,91)
-Result.BackgroundColor3=C.P1
-Result.BorderSizePixel=0
-Result.Parent=Main
+local Result = New("Frame", {
+    Position = UDim2.fromOffset(7,105),
+    Size = UDim2.new(1,-14,0,91),
+    BackgroundColor3 = C.P1,
+    BorderSizePixel = 0
+},Main)
 
 Corner(Result,9)
 Stroke(Result,C.Purple,.55,1)
 
-local RTitle=Instance.new("TextLabel")
-RTitle.Position=UDim2.fromOffset(9,6)
-RTitle.Size=UDim2.new(1,-18,0,10)
-RTitle.BackgroundTransparency=1
-RTitle.Text="ANALYSIS"
-RTitle.TextColor3=C.Gray
-RTitle.TextSize=6
-RTitle.Font=Enum.Font.GothamBold
-RTitle.TextXAlignment=Enum.TextXAlignment.Left
-RTitle.Parent=Result
+local RTitle = New("TextLabel", {
+    Position = UDim2.fromOffset(9,6),
+    Size = UDim2.new(1,-18,0,10),
+    BackgroundTransparency = 1,
+    Text = "ANALYSIS",
+    TextColor3 = C.Gray,
+    TextSize = 6,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+},Result)
 
-local RScroll=Instance.new("ScrollingFrame")
-RScroll.Position=UDim2.fromOffset(7,21)
-RScroll.Size=UDim2.new(1,-14,1,-27)
-RScroll.BackgroundTransparency=1
-RScroll.BorderSizePixel=0
-RScroll.ScrollingDirection=Enum.ScrollingDirection.Y
-RScroll.ScrollBarThickness=3
-RScroll.ScrollBarImageColor3=C.Purple
-RScroll.CanvasSize=UDim2.fromOffset(0,0)
-RScroll.Parent=Result
+local RScroll = New("ScrollingFrame", {
+    Position = UDim2.fromOffset(7,21),
+    Size = UDim2.new(1,-14,1,-27),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 3,
+    ScrollBarImageColor3 = C.Purple,
+    CanvasSize = UDim2.fromOffset(0,0)
+},Result)
 
-local RV=Instance.new("TextLabel")
-RV.Position=UDim2.fromOffset(2,2)
-RV.Size=UDim2.new(1,-8,0,50)
-RV.BackgroundTransparency=1
-RV.Text="No analysis yet."
-RV.TextColor3=C.Gray
-RV.TextSize=7
-RV.Font=Enum.Font.Code
-RV.TextWrapped=true
-RV.TextXAlignment=Enum.TextXAlignment.Left
-RV.TextYAlignment=Enum.TextYAlignment.Top
-RV.Parent=RScroll
+local RV = New("TextLabel", {
+    Position = UDim2.fromOffset(2,2),
+    Size = UDim2.new(1,-8,0,50),
+    BackgroundTransparency = 1,
+    Text = "No analysis yet.",
+    TextColor3 = C.Gray,
+    TextSize = 7,
+    Font = Enum.Font.Code,
+    TextWrapped = true,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextYAlignment = Enum.TextYAlignment.Top
+},RScroll)
 
 local function ResultText(text,color)
-RV.Text=text
-RV.TextColor3=color or C.Gray
+    RV.Text = text
+    RV.TextColor3 = color or C.Gray
 
-task.defer(function()
-	local h=RV.TextBounds.Y+12
-	RV.Size=UDim2.new(1,-8,0,math.max(50,h))
-	RScroll.CanvasSize=UDim2.fromOffset(0,h+5)
-end)
+    task.defer(function()
+        local h = RV.TextBounds.Y+12
 
+        RV.Size = UDim2.new(
+            1,-8,
+            0,math.max(50,h)
+        )
+
+        RScroll.CanvasSize = UDim2.fromOffset(0,h+5)
+    end)
 end
 
+--========================================================
 -- BUTTON GRID
+--========================================================
 
-local Check=Button(
-Main,
-"CHECK SCRIPT",
-UDim2.fromOffset(7,202),
-UDim2.fromOffset(81,34)
+local Check = MakeButton(
+    Main,
+    "CHECK SCRIPT",
+    UDim2.fromOffset(7,202),
+    UDim2.fromOffset(81,34)
 )
 
-local Clear=Button(
-Main,
-"CLEAR",
-UDim2.fromOffset(92,202),
-UDim2.fromOffset(81,34)
+local Clear = MakeButton(
+    Main,
+    "CLEAR",
+    UDim2.fromOffset(92,202),
+    UDim2.fromOffset(81,34)
 )
 
-local Copy=Button(
-Main,
-"COPY",
-UDim2.fromOffset(7,240),
-UDim2.fromOffset(81,34)
+local Copy = MakeButton(
+    Main,
+    "COPY",
+    UDim2.fromOffset(7,240),
+    UDim2.fromOffset(81,34)
 )
 
-local Reset=Button(
-Main,
-"RESET",
-UDim2.fromOffset(92,240),
-UDim2.fromOffset(81,34)
+local Reset = MakeButton(
+    Main,
+    "RESET",
+    UDim2.fromOffset(92,240),
+    UDim2.fromOffset(81,34)
 )
 
-local Info=Instance.new("TextLabel")
-Info.Position=UDim2.fromOffset(7,280)
-Info.Size=UDim2.new(1,-14,0,10)
-Info.BackgroundTransparency=1
-Info.Text="Pyrovex Hub • Analysis Only"
-Info.TextColor3=C.Gray
-Info.TextSize=5.5
-Info.Font=Enum.Font.Gotham
-Info.TextXAlignment=Enum.TextXAlignment.Center
-Info.Parent=Main
+local Info = New("TextLabel", {
+    Position = UDim2.fromOffset(7,280),
+    Size = UDim2.new(1,-14,0,10),
+    BackgroundTransparency = 1,
+    Text = "Pyrovex Hub • Analysis Only",
+    TextColor3 = C.Gray,
+    TextSize = 5.5,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Center
+},Main)
 
--- RESTORE BUTTON
+--========================================================
+-- FLOATING RESTORE BUTTON
+--========================================================
 
-local Restore=Instance.new("TextButton")
-Restore.Size=UDim2.fromOffset(50,50)
-Restore.Position=UDim2.new(.5,-25,0,12)
-Restore.BackgroundColor3=C.Red
-Restore.BorderSizePixel=0
-Restore.Text="P"
-Restore.TextColor3=C.White
-Restore.TextSize=20
-Restore.Font=Enum.Font.GothamBlack
-Restore.AutoButtonColor=false
-Restore.Visible=false
-Restore.Parent=GUI
+local Restore = New("ImageButton", {
+    Size = UDim2.fromOffset(50,50),
+    Position = UDim2.new(.5,-25,0,12),
+    BackgroundColor3 = C.Red,
+    BorderSizePixel = 0,
+    Image = LOGO,
+    ScaleType = Enum.ScaleType.Crop,
+    Visible = false,
+    AutoButtonColor = false
+},GUI)
 
 Corner(Restore,14)
-local RestoreStroke=Stroke(Restore,C.Purple2,.1,1.3)
+Restore.ClipsDescendants = true
 
-local RG=Instance.new("UIGradient")
-RG.Color=ColorSequence.new{
-ColorSequenceKeypoint.new(0,C.Red),
-ColorSequenceKeypoint.new(.5,C.Purple),
-ColorSequenceKeypoint.new(1,C.Red)
-}
-RG.Rotation=45
-RG.Parent=Restore
+local RestoreStroke = Stroke(Restore,C.Purple2,.05,1.4)
 
--- HOVER
+Gradient(Restore,ColorSequence.new({
+    ColorSequenceKeypoint.new(0,C.Red),
+    ColorSequenceKeypoint.new(.5,C.Purple),
+    ColorSequenceKeypoint.new(1,C.Red)
+}),45)
 
-local function Hover(b)
-b.MouseEnter:Connect(function()
-Tween(b,.13,{
-BackgroundColor3=Color3.fromRGB(68,12,34)
-})
-end)
+--========================================================
+-- HOVER ANIMATIONS
+--========================================================
 
-b.MouseLeave:Connect(function()
-	Tween(b,.13,{
-		BackgroundColor3=C.P2
-	})
-end)
+local function Hover(button)
+    button.MouseEnter:Connect(function()
+        Tween(button,.15,{
+            BackgroundColor3 = Color3.fromRGB(83,15,40)
+        })
+    end)
 
+    button.MouseLeave:Connect(function()
+        Tween(button,.15,{
+            BackgroundColor3 = C.P2
+        })
+    end)
+
+    button.MouseButton1Down:Connect(function()
+        Tween(button,.08,{
+            BackgroundColor3 = C.Purple
+        })
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        Tween(button,.12,{
+            BackgroundColor3 = Color3.fromRGB(83,15,40)
+        })
+    end)
 end
 
 Hover(Check)
@@ -827,321 +961,374 @@ Hover(Copy)
 Hover(Reset)
 Hover(Close)
 
+--========================================================
 -- DRAG ROOT
+--========================================================
 
 local function Drag(frame)
-local dragging=false
-local startPos
-local startRoot
+    local dragging = false
+    local startPos
+    local startRoot
 
-frame.InputBegan:Connect(function(input)
-	if input.UserInputType==Enum.UserInputType.MouseButton1
-	or input.UserInputType==Enum.UserInputType.Touch then
-		dragging=true
-		startPos=input.Position
-		startRoot=Root.Position
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
 
-		input.Changed:Connect(function()
-			if input.UserInputState==Enum.UserInputState.End then
-				dragging=false
-			end
-		end)
-	end
-end)
+            dragging = true
+            startPos = input.Position
+            startRoot = Root.Position
 
-UIS.InputChanged:Connect(function(input)
-	if not dragging then return end
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 
-	if input.UserInputType==Enum.UserInputType.MouseMovement
-	or input.UserInputType==Enum.UserInputType.Touch then
-		local delta=input.Position-startPos
+    UIS.InputChanged:Connect(function(input)
+        if not dragging then return end
 
-		Root.Position=UDim2.new(
-			startRoot.X.Scale,
-			startRoot.X.Offset+delta.X,
-			startRoot.Y.Scale,
-			startRoot.Y.Offset+delta.Y
-		)
-	end
-end)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
 
+            local delta = input.Position-startPos
+
+            Root.Position = UDim2.new(
+                startRoot.X.Scale,
+                startRoot.X.Offset+delta.X,
+                startRoot.Y.Scale,
+                startRoot.Y.Offset+delta.Y
+            )
+        end
+    end)
 end
 
 Drag(Main)
 
+--========================================================
 -- COMPILE-ONLY LUA CHECK
--- DOES NOT EXECUTE THE SCRIPT
+-- DOES NOT EXECUTE PASTED CODE
+--========================================================
 
 local function Analyze(code)
-local errors={}
+    local errors = {}
 
-if code=="" or code:match("^%s*$") then
-	table.insert(errors,"Script input is empty.")
-	return errors
+    if code == "" or code:match("^%s*$") then
+        table.insert(errors,"Script input is empty.")
+        return errors
+    end
+
+    if type(loadstring) == "function" then
+        local fn,err = loadstring(code)
+
+        if fn then
+            return errors
+        end
+
+        table.insert(
+            errors,
+            tostring(err or "Lua syntax error.")
+        )
+
+        return errors
+    end
+
+    -- BASIC FALLBACK CHECKER
+
+    local function count(pattern)
+        local n = 0
+
+        for _ in code:gmatch(pattern) do
+            n += 1
+        end
+
+        return n
+    end
+
+    if code:match("===") then
+        table.insert(errors,"Possible invalid '===' operator.")
+    end
+
+    if count("%(") ~= count("%)") then
+        table.insert(errors,"Possible unmatched parentheses.")
+    end
+
+    if count("%[") ~= count("%]") then
+        table.insert(errors,"Possible unmatched square brackets.")
+    end
+
+    if count("{") ~= count("}") then
+        table.insert(errors,"Possible unmatched curly brackets.")
+    end
+
+    local functionCount = count("%f[%a]function%f[%A]")
+    local ifCount = count("%f[%a]if%f[%A]")
+    local forCount = count("%f[%a]for%f[%A]")
+    local whileCount = count("%f[%a]while%f[%A]")
+    local doCount = count("%f[%a]do%f[%A]")
+    local endCount = count("%f[%a]end%f[%A]")
+
+    local blocks =
+        functionCount +
+        ifCount +
+        forCount +
+        whileCount +
+        doCount
+
+    if endCount > blocks then
+        table.insert(errors,"Possible unexpected 'end' keyword.")
+    elseif blocks > endCount then
+        table.insert(errors,"Possible missing 'end' keyword.")
+    end
+
+    return errors
 end
 
-if type(loadstring)=="function" then
-	local fn,err=loadstring(code)
-
-	if fn then
-		return errors
-	end
-
-	table.insert(errors,tostring(err or "Lua syntax error."))
-	return errors
-end
-
--- FALLBACK CHECKER
--- Basic checks only; not a full Lua parser.
-
-local function count(pattern)
-	local n=0
-	for _ in code:gmatch(pattern) do
-		n+=1
-	end
-	return n
-end
-
-if code:match("===") then
-	table.insert(errors,"Possible invalid '===' operator.")
-end
-
-if count("%(")~=count("%)") then
-	table.insert(errors,"Possible unmatched parentheses.")
-end
-
-if count("%[")~=count("%]") then
-	table.insert(errors,"Possible unmatched square brackets.")
-end
-
-if count("{")~=count("}") then
-	table.insert(errors,"Possible unmatched curly brackets.")
-end
-
-local functionCount=count("%f[%a]function%f[%A]")
-local ifCount=count("%f[%a]if%f[%A]")
-local forCount=count("%f[%a]for%f[%A]")
-local whileCount=count("%f[%a]while%f[%A]")
-local doCount=count("%f[%a]do%f[%A]")
-local endCount=count("%f[%a]end%f[%A]")
-
-local blocks=
-	functionCount+
-	ifCount+
-	forCount+
-	whileCount+
-	doCount
-
-if endCount>blocks then
-	table.insert(errors,"Possible unexpected 'end' keyword.")
-elseif blocks>endCount then
-	table.insert(errors,"Possible missing 'end' keyword.")
-end
-
-return errors
-
-end
-
+--========================================================
 -- CHECK SCRIPT
+--========================================================
 
 Check.MouseButton1Click:Connect(function()
-if Checking then return end
+    if Checking then return end
 
-Checking=true
-Check.Text="CHECKING..."
-SV.Text="ANALYZING..."
-SV.TextColor3=C.Purple2
+    Checking = true
 
-ResultText("Scanning Lua syntax...",C.Gray)
+    Check.Text = "CHECKING..."
+    SV.Text = "ANALYZING..."
+    SV.TextColor3 = C.Purple2
 
-task.wait(.35)
+    ResultText("Scanning Lua syntax...",C.Gray)
 
-local errors=Analyze(Box.Text)
+    task.wait(.35)
 
-if #errors==0 then
-	SV.Text="NO ERROR FOUND"
-	SV.TextColor3=C.Good
+    local errors = Analyze(Box.Text)
 
-	ResultText(
-		"✓ No syntax errors found.\n\nCompile check completed.",
-		C.Good
-	)
-else
-	SV.Text="ERROR FOUND"
-	SV.TextColor3=C.Bad
+    if #errors == 0 then
+        SV.Text = "NO ERROR FOUND"
+        SV.TextColor3 = C.Good
 
-	local output="Errors found: "..#errors.."\n\n"
+        ResultText(
+            "✓ No syntax errors found.\n\nCompile check completed.",
+            C.Good
+        )
+    else
+        SV.Text = "ERROR FOUND"
+        SV.TextColor3 = C.Bad
 
-	for i,v in ipairs(errors) do
-		output=output..i..". "..v.."\n"
-	end
+        local output = "Errors found: "..#errors.."\n\n"
 
-	ResultText(output,C.Bad)
-end
+        for i,v in ipairs(errors) do
+            output = output..i..". "..v.."\n"
+        end
 
-Check.Text="CHECK SCRIPT"
-Checking=false
+        ResultText(output,C.Bad)
+    end
 
+    Check.Text = "CHECK SCRIPT"
+    Checking = false
 end)
 
+--========================================================
 -- CLEAR
+--========================================================
 
 Clear.MouseButton1Click:Connect(function()
-Box.Text=""
-Scroll.CanvasPosition=Vector2.new(0,0)
+    Box.Text = ""
+    Scroll.CanvasPosition = Vector2.zero
 
-SV.Text="READY TO CHECK"
-SV.TextColor3=C.White
+    SV.Text = "READY TO CHECK"
+    SV.TextColor3 = C.White
 
-ResultText("No analysis yet.",C.Gray)
+    ResultText("No analysis yet.",C.Gray)
 
+    UpdateCanvas()
 end)
 
+--========================================================
 -- COPY
+--========================================================
 
 Copy.MouseButton1Click:Connect(function()
-if Box.Text=="" then
-SV.Text="NOTHING TO COPY"
-SV.TextColor3=C.Bad
-return
-end
+    if Box.Text == "" then
+        SV.Text = "NOTHING TO COPY"
+        SV.TextColor3 = C.Bad
+        return
+    end
 
-if setclipboard then
-	local ok=pcall(function()
-		setclipboard(Box.Text)
-	end)
+    if setclipboard then
+        local ok = pcall(function()
+            setclipboard(Box.Text)
+        end)
 
-	if ok then
-		SV.Text="COPIED"
-		SV.TextColor3=C.Good
-	else
-		SV.Text="COPY FAILED"
-		SV.TextColor3=C.Bad
-	end
-else
-	SV.Text="COPY NOT AVAILABLE"
-	SV.TextColor3=C.Bad
-end
+        if ok then
+            SV.Text = "COPIED"
+            SV.TextColor3 = C.Good
+        else
+            SV.Text = "COPY FAILED"
+            SV.TextColor3 = C.Bad
+        end
+    else
+        SV.Text = "COPY NOT AVAILABLE"
+        SV.TextColor3 = C.Bad
+    end
 
-task.delay(1,function()
-	if GUI.Parent then
-		SV.Text="READY TO CHECK"
-		SV.TextColor3=C.White
-	end
+    task.delay(1,function()
+        if GUI.Parent then
+            SV.Text = "READY TO CHECK"
+            SV.TextColor3 = C.White
+        end
+    end)
 end)
 
-end)
-
+--========================================================
 -- RESET
+--========================================================
 
 Reset.MouseButton1Click:Connect(function()
-Box.Text=""
-Scroll.CanvasPosition=Vector2.new(0,0)
-RScroll.CanvasPosition=Vector2.new(0,0)
+    Box.Text = ""
 
-SV.Text="READY TO CHECK"
-SV.TextColor3=C.White
+    Scroll.CanvasPosition = Vector2.zero
+    RScroll.CanvasPosition = Vector2.zero
+
+    SV.Text = "READY TO CHECK"
+    SV.TextColor3 = C.White
+
+    ResultText("No analysis yet.",C.Gray)
+
+    UpdateCanvas()
+end)
+
+--========================================================
+-- CLOSE / MINIMIZE
+--========================================================
+
+Close.MouseButton1Click:Connect(function()
+    if Minimized then return end
+
+    Minimized = true
+
+    Tween(Root,.25,{
+        Size = UDim2.fromOffset(5,5)
+    })
+
+    task.wait(.22)
+
+    Root.Visible = false
+
+    Restore.Visible = true
+    Restore.Size = UDim2.fromOffset(8,8)
+    Restore.BackgroundTransparency = 1
+    Restore.ImageTransparency = 1
+
+    Tween(Restore,.3,{
+        Size = UDim2.fromOffset(50,50),
+        BackgroundTransparency = 0,
+        ImageTransparency = 0
+    })
+end)
+
+--========================================================
+-- RESTORE
+--========================================================
+
+Restore.MouseButton1Click:Connect(function()
+    if not Minimized then return end
+
+    Minimized = false
+
+    Restore.Visible = false
+
+    Root.Visible = true
+    Root.Size = UDim2.fromOffset(5,5)
+
+    Tween(Root,.32,{
+        Size = UDim2.fromOffset(350,300)
+    })
+
+    task.defer(UpdateCanvas)
+end)
+
+--========================================================
+-- RESTORE DRAG
+--========================================================
+
+do
+    local dragging = false
+    local startPos
+    local startRestore
+
+    Restore.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            startPos = input.Position
+            startRestore = Restore.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if not dragging then return end
+
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            local delta = input.Position-startPos
+
+            Restore.Position = UDim2.new(
+                startRestore.X.Scale,
+                startRestore.X.Offset+delta.X,
+                startRestore.Y.Scale,
+                startRestore.Y.Offset+delta.Y
+            )
+        end
+    end)
+end
+
+--========================================================
+-- ADVANCED COLOR ANIMATION
+--========================================================
+
+local animationTime = 0
+
+local AnimationConnection
+
+AnimationConnection = RS.RenderStepped:Connect(function(dt)
+    if not GUI.Parent then
+        AnimationConnection:Disconnect()
+        return
+    end
+
+    animationTime += dt
+
+    local value = (math.sin(animationTime*2)+1)/2
+
+    MainStroke.Color = C.Red:Lerp(C.Purple2,value)
+    LogoStroke.Color = C.Purple2:Lerp(C.Red,value)
+    RestoreStroke.Color = C.Red:Lerp(C.Purple2,value)
+
+    LogoGradient.Rotation = (animationTime*35)%360
+
+    if animationTime > 100000 then
+        animationTime = 0
+    end
+end)
+
+--========================================================
+-- INITIAL UPDATE
+--========================================================
+
+task.defer(UpdateCanvas)
 
 ResultText("No analysis yet.",C.Gray)
 
-end)
-
--- CLOSE / MINIMIZE
-
-Close.MouseButton1Click:Connect(function()
-if Minimized then return end
-Minimized=true
-
-Tween(Root,.25,{
-	Size=UDim2.fromOffset(5,5)
-})
-
-task.wait(.22)
-
-Root.Visible=false
-Restore.Visible=true
-Restore.Size=UDim2.fromOffset(8,8)
-Restore.BackgroundTransparency=1
-
-Tween(Restore,.3,{
-	Size=UDim2.fromOffset(50,50),
-	BackgroundTransparency=0
-})
-
-end)
-
--- RESTORE
-
-Restore.MouseButton1Click:Connect(function()
-if not Minimized then return end
-Minimized=false
-
-Restore.Visible=false
-Root.Visible=true
-Root.Size=UDim2.fromOffset(5,5)
-
-Tween(Root,.32,{
-	Size=UDim2.fromOffset(350,300)
-})
-
-task.defer(UpdateCanvas)
-
-end)
-
--- RESTORE BUTTON DRAG
-
-do
-local dragging=false
-local startPos
-local startRestore
-
-Restore.InputBegan:Connect(function(input)
-	if input.UserInputType==Enum.UserInputType.MouseButton1
-	or input.UserInputType==Enum.UserInputType.Touch then
-		dragging=true
-		startPos=input.Position
-		startRestore=Restore.Position
-
-		input.Changed:Connect(function()
-			if input.UserInputState==Enum.UserInputState.End then
-				dragging=false
-			end
-		end)
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if not dragging then return end
-
-	if input.UserInputType==Enum.UserInputType.MouseMovement
-	or input.UserInputType==Enum.UserInputType.Touch then
-		local delta=input.Position-startPos
-
-		Restore.Position=UDim2.new(
-			startRestore.X.Scale,
-			startRestore.X.Offset+delta.X,
-			startRestore.Y.Scale,
-			startRestore.Y.Offset+delta.Y
-		)
-	end
-end)
-
-end
-
--- ANIMATION
-
-local t=0
-
-RS.RenderStepped:Connect(function(dt)
-if not GUI.Parent then return end
-
-t+=dt
-local v=(math.sin(t*2)+1)/2
-
-MainStroke.Color=C.Red:Lerp(C.Purple,v)
-LogoStroke.Color=C.Purple2:Lerp(C.Red,v)
-RestoreStroke.Color=C.Red:Lerp(C.Purple2,v)
-
-end)
-
-task.defer(UpdateCanvas)
+--========================================================
+-- PYROVEX HUB INITIALIZED
+--========================================================
